@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { VkConnectionInfo } from "@/components/VkConnectionInfo";
 
 const Settings = () => {
   const [vkToken, setVkToken] = useState("");
@@ -333,30 +334,13 @@ const Settings = () => {
               </Button>
             </>
           ) : (
-            <div className="space-y-4">
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md p-4">
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-emerald-500">Успешно подключено</p>
-                    <p className="text-muted-foreground mt-1">
-                      Вы можете публиковать посты в свои группы и на стену
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Подключенные группы: 3</p>
-                  <p className="text-xs text-muted-foreground">Личная страница + 2 сообщества</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Users className="w-4 h-4 mr-1" />
-                  Управлять
-                </Button>
-              </div>
-            </div>
+            <VkConnectionInfo 
+              vkToken={vkToken} 
+              onRefresh={() => {
+                // Refresh user settings to get updated token
+                loadUserSettings();
+              }}
+            />
           )}
         </CardContent>
       </Card>

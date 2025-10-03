@@ -167,10 +167,40 @@ const CreatePost = () => {
 
         const results = await Promise.allSettled(publishPromises);
         
-        // Check for errors
+        // Check for errors and update post status accordingly
         const errors = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason);
+        const successes = results.filter(r => r.status === 'fulfilled');
+        
         if (errors.length > 0) {
           console.error('Publishing errors:', errors);
+          
+          // Update post status to error if any platform failed
+          await supabase
+            .from('posts')
+            .update({ 
+              status: 'error',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', post.id);
+          
+          toast({
+            title: "Ошибка публикации",
+            description: `Не удалось опубликовать в ${errors.length} из ${results.length} платформ`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Update post status to published if all platforms succeeded
+        if (successes.length > 0) {
+          await supabase
+            .from('posts')
+            .update({ 
+              status: 'published',
+              published_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', post.id);
         }
       }
 

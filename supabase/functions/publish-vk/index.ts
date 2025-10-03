@@ -14,10 +14,19 @@ serve(async (req) => {
   try {
     const { postId, content, media_urls, vk_token } = await req.json()
 
-    console.log('Publishing to VK:', { postId })
+    console.log('Publishing to VK:', { postId, hasMedia: media_urls?.length > 0 })
+
+    // Prepare attachments for media files
+    let attachments = ''
+    if (media_urls && media_urls.length > 0) {
+      // For now, we'll just include the URLs as text since VK requires special handling for media
+      // In a production app, you'd need to upload media to VK servers first
+      const mediaText = media_urls.map(url => `\n📎 ${url}`).join('')
+      content = content + mediaText
+    }
 
     // Publish to VK wall
-    const vkResponse = await fetch(`https://api.vk.com/method/wall.post`, {
+    const vkResponse = await fetch(`https://api.vk.ru/method/wall.post`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -27,6 +36,7 @@ serve(async (req) => {
         v: '5.131',
         message: content,
         from_group: '0', // Post from user, not group
+        attachments: attachments,
       }),
     })
 
