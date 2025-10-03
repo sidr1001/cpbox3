@@ -1,0 +1,10 @@
+project_id = "asjhequnposexawqaels"
+
+[functions.publish-telegram]
+verify_jwt = false
+
+[functions.publish-vk]
+verify_jwt = false
+
+[functions.vk-oauth]
+verify_jwt = false
