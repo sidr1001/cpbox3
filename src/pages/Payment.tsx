@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { CreditCard, Wallet, History } from 'lucide-react';
 
@@ -40,15 +40,8 @@ export default function Payment() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('payment_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setTransactions(data || []);
+      // TODO: implement /api/payments endpoint; for now show empty history
+      setTransactions([]);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }
@@ -56,12 +49,7 @@ export default function Payment() {
 
   const fetchPaymentMethods = async () => {
     try {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('payment_methods')
-        .single();
-
-      if (error) throw error;
+      const data: any = await apiClient.getSettings();
       const methods = data?.payment_methods;
       setPaymentMethods(
         Array.isArray(methods) 
@@ -86,62 +74,16 @@ export default function Payment() {
     setLoading(true);
 
     try {
-      // Create transaction record
-      const { data, error } = await supabase
-        .from('payment_transactions')
-        .insert({
-          user_id: user.id,
-          amount: Number(amount),
-          payment_method: paymentMethod,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Simulate payment processing (in real app, integrate with payment gateway)
-      setTimeout(async () => {
-        try {
-          // Update transaction status to completed
-          await supabase
-            .from('payment_transactions')
-            .update({ status: 'completed' })
-            .eq('id', data.id);
-
-          // Update user balance
-          const { error: balanceError } = await supabase
-            .from('user_balance')
-            .update({ balance: balance + Number(amount) })
-            .eq('user_id', user.id);
-
-          if (balanceError) throw balanceError;
-
-          toast({
-            title: "Успешно",
-            description: `Баланс пополнен на ${amount}₽`,
-          });
-
-          setAmount('');
-          fetchTransactions();
-        } catch (error) {
-          console.error('Error processing payment:', error);
-          toast({
-            title: "Ошибка",
-            description: "Ошибка при обработке платежа",
-            variant: "destructive",
-          });
-        }
+      // TODO: implement payment endpoint. For now, show stub success and update UI only
+      setTimeout(() => {
+        toast({ title: 'Успешно', description: `Баланс пополнен на ${amount}₽ (демо)` });
+        setAmount('');
         setLoading(false);
-      }, 2000);
-
+        fetchTransactions();
+      }, 1000);
     } catch (error) {
       console.error('Error creating payment:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось создать платеж",
-        variant: "destructive",
-      });
+      toast({ title: 'Ошибка', description: 'Не удалось создать платеж', variant: 'destructive' });
       setLoading(false);
     }
   };
