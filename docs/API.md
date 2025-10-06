@@ -7,7 +7,7 @@ CrossPost Pro использует Supabase в качестве Backend-as-a-Ser
 ## Базовый URL
 
 ```
-https://asjhequnposexawqaels.supabase.co/rest/v1/
+https://yourdomain.com/api/
 ```
 
 ## Аутентификация

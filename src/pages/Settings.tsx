@@ -298,7 +298,7 @@ const Settings = () => {
                 <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
                   <li>Перейдите на <a href="https://dev.vk.ru/apps" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">dev.vk.ru/apps</a></li>
                   <li>Создайте приложение типа "Веб-сайт"</li>
-                  <li>В настройках укажите Redirect URI: <code className="bg-muted px-1 rounded text-xs">https://asjhequnposexawqaels.supabase.co/functions/v1/vk-oauth</code></li>
+                  <li>В настройках укажите Redirect URI: <code className="bg-muted px-1 rounded text-xs">https://yourdomain.com/api/vk/oauth/callback</code></li>
                   <li>Скопируйте ID приложения и защищенный ключ</li>
                   <li>Добавьте секреты в настройки проекта Supabase</li>
                 </ol>

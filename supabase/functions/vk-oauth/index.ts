@@ -32,6 +32,9 @@ serve(async (req) => {
 
     if (action === 'get_auth_url') {
       const clientId = Deno.env.get('VK_CLIENT_ID') || ''
+      // NOTE: This Supabase Edge Function is deprecated in favor of backend route /api/vk/oauth/callback
+      // Old redirect URIs commented below are left for reference. Migrate to your backend.
+      // const redirectUri = encodeURIComponent('https://yourdomain.com/api/vk/oauth/callback')
       const redirectUri = encodeURIComponent('https://asjhequnposexawqaels.supabase.co/functions/v1/vk-oauth')
       const scope = 'photos,audio,video,docs,notes,pages,status,offers,questions,wall,groups,email,notifications,stats,ads,offline,docs,pages,stats,notifications'
 
