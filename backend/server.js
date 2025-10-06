@@ -13,6 +13,9 @@ const postsRoutes = require('./routes/posts');
 const vkOAuthRoutes = require('./routes/vk-oauth');
 const vkRoutes = require('./routes/vk');
 const mediaRoutes = require('./routes/media');
+const adminRoutes = require('./routes/admin');
+const paymentsRoutes = require('./routes/payments');
+const vkAccountsRoutes = require('./routes/vk-accounts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,7 +43,10 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/vk', vkOAuthRoutes);
 app.use('/api/vk', vkRoutes);
+app.use('/api/vk', vkAccountsRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 app.use(errorLogger);
 

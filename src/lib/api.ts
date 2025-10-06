@@ -88,5 +88,19 @@ export const apiClient = {
   async deleteMedia(id: string) {
     return request(`/media/${id}`, { method: 'DELETE' });
   },
+
+  // Admin
+  getAdminUsers() { return request('/admin/users'); },
+  setUserStatus(userId: string, isActive: boolean) { return request(`/admin/users/${userId}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }); },
+  setUserBalance(userId: string, balance: number) { return request(`/admin/users/${userId}/balance`, { method: 'PATCH', body: JSON.stringify({ balance }) }); },
+
+  // Payments
+  getPayments(limit = 10) { return request(`/payments${buildQuery({ limit })}`); },
+  createPayment(amount: number, payment_method: string) { return request('/payments', { method: 'POST', body: JSON.stringify({ amount, payment_method }) }); },
+
+  // VK accounts
+  getVkAccounts() { return request('/vk/accounts'); },
+  saveVkAccounts(accounts: any[]) { return request('/vk/accounts', { method: 'POST', body: JSON.stringify({ accounts }) }); },
+  deleteVkAccount(vk_id: string) { return request(`/vk/accounts/${vk_id}`, { method: 'DELETE' }); },
 };
 
