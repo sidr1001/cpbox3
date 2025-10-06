@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+// Replace Supabase storage with your own storage upload API if needed
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -56,29 +56,13 @@ export const useMediaUpload = () => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
-        // Upload to Supabase Storage
-        const { data, error } = await supabase.storage
-          .from('media')
-          .upload(fileName, file);
-
-        if (error) {
-          console.error('Upload error:', error);
-          toast({
-            title: "Ошибка загрузки",
-            description: `Не удалось загрузить ${file.name}`,
-            variant: "destructive",
-          });
-          continue;
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('media')
-          .getPublicUrl(fileName);
+        // TODO: Implement upload to your storage and return public URL
+        toast({ title: 'Загрузка не настроена', description: 'Настройте загрузку файлов на сервере', variant: 'destructive' });
+        continue;
 
         const uploadedFile: UploadedFile = {
-          id: data.path,
-          url: publicUrl,
+          id: fileName,
+          url: '',
           name: file.name,
           type: file.type,
           size: file.size,
@@ -112,14 +96,7 @@ export const useMediaUpload = () => {
 
   const removeFile = async (fileId: string) => {
     try {
-      // Remove from storage
-      const { error } = await supabase.storage
-        .from('media')
-        .remove([fileId]);
-
-      if (error) {
-        console.error('Delete error:', error);
-      }
+      // TODO: implement deletion from your storage
 
       // Remove from local state
       setUploadedFiles(prev => prev.filter(file => file.id !== fileId));

@@ -1,13 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: any | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any } | undefined>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: any } | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -22,61 +20,50 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session FIRST
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    // Restore user from local storage if exists (minimal)
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) setUser(JSON.parse(raw));
+    } catch {}
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const res = await apiClient.login(email, password);
+      setUser(res.user);
+      try { localStorage.setItem('user', JSON.stringify(res.user)); } catch {}
+      return { error: null };
+    } catch (error) {
+      return { error } as any;
+    }
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          display_name: displayName,
-        },
-      },
-    });
-    return { error };
+    try {
+      await apiClient.register(email, password, displayName);
+      // авто-логин
+      const res = await apiClient.login(email, password);
+      setUser(res.user);
+      try { localStorage.setItem('user', JSON.stringify(res.user)); } catch {}
+      return { error: null };
+    } catch (error) {
+      return { error } as any;
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    apiClient.logout();
+    setUser(null);
+    try { localStorage.removeItem('user'); } catch {}
   };
 
   const value = {
     user,
-    session,
     loading,
     signIn,
     signUp,

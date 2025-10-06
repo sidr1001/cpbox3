@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useAuth } from './useAuth';
 
 export type UserRole = 'user' | 'admin' | 'superadmin';
@@ -18,18 +18,8 @@ export function useUserRole() {
 
     const fetchUserRole = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user role:', error);
-          setRole('user'); // Default role
-        } else {
-          setRole(data?.role || 'user');
-        }
+        const settings = await apiClient.getSettings();
+        setRole(settings?.role || 'user');
       } catch (error) {
         console.error('Error fetching user role:', error);
         setRole('user');

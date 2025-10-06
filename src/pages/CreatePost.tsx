@@ -21,7 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 
 const CreatePost = () => {
   const [content, setContent] = useState("");
@@ -82,7 +82,7 @@ const CreatePost = () => {
     setPublishing(true);
 
     try {
-      // Create post in database
+      // Create post in database (backend API)
       const scheduledAt = (isScheduled && scheduleDate && scheduleTime)
         ? (() => {
             const [hh, mm] = (scheduleTime || '00:00').split(':').map(Number)
@@ -100,72 +100,34 @@ const CreatePost = () => {
           })()
         : null;
 
-      const { data: post, error: postError } = await supabase
-        .from('posts')
-        .insert({
-          user_id: user.id,
-          title: content.substring(0, 100),
-          content,
-          media_urls: uploadedFiles.map(f => f.url),
-          platforms: Object.keys(platforms).filter(p => platforms[p as keyof typeof platforms]),
-          status: isScheduled ? 'scheduled' : 'draft',
-          scheduled_at: scheduledAt,
-        })
-        .select()
-        .single();
-
-      if (postError) throw postError;
+      const post = await apiClient.createPost({
+        title: content.substring(0, 100),
+        content,
+        media_urls: uploadedFiles.map(f => f.url),
+        platforms: Object.keys(platforms).filter(p => platforms[p as keyof typeof platforms]),
+        status: isScheduled ? 'scheduled' : 'draft',
+        scheduled_at: scheduledAt,
+      });
 
       // Get user settings for tokens
-      const { data: settings, error: settingsError } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (settingsError) {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось получить настройки подключения",
-          variant: "destructive",
-        });
-        return;
-      }
+      const settings = await apiClient.getSettings();
 
       // Publish immediately if not scheduled
       if (!isScheduled) {
-        const publishPromises = [];
+        const publishPromises: Promise<any>[] = [];
 
         if (platforms.telegram && settings?.telegram_token && settings?.telegram_chat_id) {
-          publishPromises.push(
-            supabase.functions.invoke('publish-telegram', {
-              body: {
-                postId: post.id,
-                content,
-                media_urls: uploadedFiles.map(f => f.url),
-                telegram_token: settings.telegram_token,
-                telegram_chat_id: settings.telegram_chat_id,
-                // Optional inline buttons (e.g., open link)
-                buttons: linkUrl ? [{ text: 'Открыть ссылку', url: linkUrl }] : undefined,
-              }
-            })
-          );
+          // Backend publish will handle telegram if connected
         }
 
         if (platforms.vk && settings?.vk_token) {
-          publishPromises.push(
-            supabase.functions.invoke('publish-vk', {
-              body: {
-                postId: post.id,
-                content,
-                media_urls: uploadedFiles.map(f => f.url),
-                vk_token: settings.vk_token,
-              }
-            })
-          );
+          // Backend publish will handle vk if connected
         }
 
-        const results = await Promise.allSettled(publishPromises);
+        // Single backend endpoint to publish to all selected platforms
+        const results = await Promise.allSettled([
+          apiClient.publishPost(post.id)
+        ]);
         
         // Check for errors and update post status accordingly
         const errors = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason);

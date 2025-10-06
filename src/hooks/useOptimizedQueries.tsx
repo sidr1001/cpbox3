@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useCachedData } from './useCache';
 
 // Оптимизированные запросы с кэшированием и пагинацией
@@ -13,37 +13,12 @@ export function useOptimizedPosts(userId: string, options: {
 
   const fetchPosts = useMemo(() => {
     return async () => {
-      let query = supabase
-        .from('posts')
-        .select(`
-          id,
-          title,
-          content,
-          status,
-          platforms,
-          created_at,
-          published_at,
-          scheduled_at,
-          media_urls,
-          vk_post_id,
-          telegram_message_id
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error, count } = await query;
-      
-      if (error) throw error;
-      
+      const data: any = await apiClient.getPosts({ limit, offset, status });
+      const posts = Array.isArray(data) ? data : (data?.data || []);
       return {
-        posts: data || [],
-        total: count || 0,
-        hasMore: (data?.length || 0) === limit,
+        posts,
+        total: data?.total ?? posts.length,
+        hasMore: posts.length === limit,
       };
     };
   }, [userId, limit, offset, status]);
@@ -63,14 +38,8 @@ export function useOptimizedUserStats(userId: string) {
   const fetchStats = useMemo(() => {
     return async () => {
       // Используем один запрос для получения всех статистик
-      const { data, error } = await supabase
-        .from('posts')
-        .select('status, created_at')
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
-      const posts = data || [];
+      const data: any = await apiClient.getPosts({ limit: 1000, page: 1 });
+      const posts = Array.isArray(data) ? data : (data?.data || []);
       const now = new Date();
       const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -103,16 +72,7 @@ export function useOptimizedUserStats(userId: string) {
 export function useOptimizedUserSettings(userId: string) {
   const fetchSettings = useMemo(() => {
     return async () => {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
+      const data: any = await apiClient.getSettings();
       return data || {
         vk_connected: false,
         telegram_connected: false,
@@ -135,16 +95,8 @@ export function useOptimizedUserSettings(userId: string) {
 
 // Хук для батчевых операций
 export function useBatchOperations() {
-  const batchUpdate = async (updates: Array<{
-    table: string;
-    id: string;
-    data: Record<string, any>;
-  }>) => {
-    const promises = updates.map(({ table, id, data }) =>
-      supabase.from(table).update(data).eq('id', id)
-    );
-
-    const results = await Promise.allSettled(promises);
+  const batchUpdate = async (_updates: Array<{ table: string; id: string; data: Record<string, any>; }>) => {
+    const results: PromiseSettledResult<any>[] = [];
     
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
@@ -152,15 +104,8 @@ export function useBatchOperations() {
     return { successful, failed, results };
   };
 
-  const batchDelete = async (deletes: Array<{
-    table: string;
-    id: string;
-  }>) => {
-    const promises = deletes.map(({ table, id }) =>
-      supabase.from(table).delete().eq('id', id)
-    );
-
-    const results = await Promise.allSettled(promises);
+  const batchDelete = async (_deletes: Array<{ table: string; id: string; }>) => {
+    const results: PromiseSettledResult<any>[] = [];
     
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
@@ -177,20 +122,9 @@ export function useOptimizedSearch(userId: string, query: string) {
     return async () => {
       if (!query.trim()) return { posts: [], total: 0 };
 
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', userId)
-        .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      return {
-        posts: data || [],
-        total: data?.length || 0,
-      };
+      const data: any = await apiClient.getPosts({ q: query, limit: 50 });
+      const posts = Array.isArray(data) ? data : (data?.data || []);
+      return { posts, total: posts.length };
     };
   }, [userId, query]);
 

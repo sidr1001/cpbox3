@@ -14,7 +14,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,16 +41,9 @@ const Dashboard = () => {
       setLoading(true);
       
       // Load recent posts (last 10)
-      const { data: posts, error: postsError } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (postsError) throw postsError;
-
-      setRecentPosts(posts || []);
+      const postsRes = await apiClient.getPosts({ limit: 10, page: 1 });
+      const posts = Array.isArray(postsRes) ? postsRes : postsRes?.data || [];
+      setRecentPosts(posts);
 
       // Calculate stats
       const totalPosts = posts?.length || 0;

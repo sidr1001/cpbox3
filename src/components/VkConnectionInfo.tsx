@@ -14,7 +14,7 @@ import {
   Edit,
   Crown
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface VkUser {
@@ -59,17 +59,8 @@ export function VkConnectionInfo({ vkToken, onRefresh }: VkConnectionInfoProps) 
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('vk-user-info', {
-        body: { vk_token: vkToken }
-      });
-
-      if (error) throw error;
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setConnectionInfo(data);
+      const data = await apiClient.getVkMe(vkToken);
+      setConnectionInfo(data as any);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Не удалось загрузить информацию';
       setError(errorMessage);

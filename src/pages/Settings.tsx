@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { VkConnectionInfo } from "@/components/VkConnectionInfo";
 
 const Settings = () => {
@@ -103,23 +103,12 @@ const Settings = () => {
 
   const loadUserSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        throw error;
-      }
-
-      if (data) {
-        setVkToken(data.vk_token || '');
-        setTelegramToken(data.telegram_token || '');
-        setTelegramChatId(data.telegram_chat_id || '');
-        setIsVkConnected(data.vk_connected || false);
-        setIsTelegramConnected(data.telegram_connected || false);
-      }
+      const data = await apiClient.getSettings();
+      setVkToken(data?.vk_token || '');
+      setTelegramToken(data?.telegram_token || '');
+      setTelegramChatId(data?.telegram_chat_id || '');
+      setIsVkConnected(data?.vk_connected || false);
+      setIsTelegramConnected(data?.telegram_connected || false);
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
@@ -136,36 +125,9 @@ const Settings = () => {
     try {
       setSaving(true);
       
-      // First check if user settings exist
-      const { data: existingSettings } = await supabase
-        .from('user_settings')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (existingSettings) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('user_settings')
-          .update({
-            ...updates,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user?.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new settings
-        const { error } = await supabase
-          .from('user_settings')
-          .insert({
-            user_id: user?.id,
-            ...updates,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (error) throw error;
-      }
+      await apiClient.updateSettings({
+        ...updates,
+      });
 
       // Reload settings to reflect changes
       await loadUserSettings();
@@ -191,15 +153,8 @@ const Settings = () => {
       setSaving(true);
       
       // Get VK OAuth URL from edge function
-      const { data, error } = await supabase.functions.invoke('vk-oauth', {
-        body: { action: 'get_auth_url' }
-      });
-
-      if (error || !data?.auth_url) {
-        throw new Error('Failed to get VK auth URL');
-      }
-
-      // Redirect to VK OAuth (will redirect back to /settings with params in hash)
+      const data = await apiClient.getVkAuthUrl();
+      if (!data?.auth_url) throw new Error('Failed to get VK auth URL');
       window.location.href = data.auth_url;
 
     } catch (error) {
