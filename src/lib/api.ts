@@ -74,5 +74,19 @@ export const apiClient = {
   getPosts(params?: Record<string, any>) { return request(`/posts${buildQuery(params)}`); },
   createPost(payload: Record<string, any>) { return request("/posts", { method: "POST", body: JSON.stringify(payload) }); },
   publishPost(postId: string | number) { return request(`/posts/${postId}/publish`, { method: "POST" }); },
+
+  // Media
+  async uploadMedia(files: File[]) {
+    const url = `${API_BASE_URL}/media`;
+    const form = new FormData();
+    files.forEach(f => form.append('files', f));
+    const token = getAuthToken();
+    const resp = await fetch(url, { method: 'POST', body: form, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!resp.ok) throw new Error('Upload failed');
+    return resp.json();
+  },
+  async deleteMedia(id: string) {
+    return request(`/media/${id}`, { method: 'DELETE' });
+  },
 };
 

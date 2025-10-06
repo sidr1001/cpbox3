@@ -2,6 +2,7 @@ import { useState } from 'react';
 // Replace Supabase storage with your own storage upload API if needed
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { apiClient } from '@/lib/api';
 
 export interface UploadedFile {
   id: string;
@@ -52,20 +53,20 @@ export const useMediaUpload = () => {
           continue;
         }
 
-        // Generate unique filename
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
-
-        // TODO: Implement upload to your storage and return public URL
-        toast({ title: 'Загрузка не настроена', description: 'Настройте загрузку файлов на сервере', variant: 'destructive' });
-        continue;
+        // Batch upload via API
+        const res = await apiClient.uploadMedia([file]);
+        const uploaded = res?.files?.[0];
+        if (!uploaded) {
+          toast({ title: 'Ошибка загрузки', description: `Не удалось загрузить ${file.name}`, variant: 'destructive' });
+          continue;
+        }
 
         const uploadedFile: UploadedFile = {
-          id: fileName,
-          url: '',
-          name: file.name,
-          type: file.type,
-          size: file.size,
+          id: uploaded.id,
+          url: uploaded.url,
+          name: uploaded.name,
+          type: uploaded.type,
+          size: uploaded.size,
         };
 
         uploadedFiles.push(uploadedFile);
