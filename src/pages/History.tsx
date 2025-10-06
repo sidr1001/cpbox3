@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,9 @@ const History = () => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setPosts(data || []);
+      const res: any = await apiClient.getPosts({ limit: 100, page: 1 });
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      setPosts(data);
     } catch (e) {
       console.error('Failed to load posts history', e);
     } finally {
@@ -47,7 +44,7 @@ const History = () => {
     switch (status) {
       case "published": return "bg-emerald-500";
       case "scheduled": return "bg-yellow-500";
-      case "failed": return "bg-destructive";
+      case "error": return "bg-destructive";
       default: return "bg-muted";
     }
   };
@@ -56,7 +53,7 @@ const History = () => {
     switch (status) {
       case "published": return "Опубликован";
       case "scheduled": return "Запланирован";
-      case "failed": return "Ошибка";
+      case "error": return "Ошибка";
       default: return "Неизвестно";
     }
   };
