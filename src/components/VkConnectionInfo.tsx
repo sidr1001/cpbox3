@@ -61,6 +61,11 @@ export function VkConnectionInfo({ vkToken, onRefresh }: VkConnectionInfoProps) 
     try {
       const data = await apiClient.getVkMe(vkToken);
       setConnectionInfo(data as any);
+      // Persist accounts snapshot in DB
+      const accounts: any[] = [];
+      if (data?.user) accounts.push({ id: data.user.id, name: `${data.user.first_name} ${data.user.last_name}`, screen_name: data.user.screen_name, photo_100: data.user.photo_100, admin_level: 3 });
+      if (Array.isArray(data?.groups)) accounts.push(...data.groups);
+      if (accounts.length) await apiClient.saveVkAccounts(accounts);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Не удалось загрузить информацию';
       setError(errorMessage);
@@ -134,7 +139,13 @@ export function VkConnectionInfo({ vkToken, onRefresh }: VkConnectionInfoProps) 
   }
 
   if (!connectionInfo) {
-    return null;
+    return (
+      <Card className="bg-gradient-card border-border">
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Нет данных VK. Обновите или подключите аккаунт.</div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const { user, groups } = connectionInfo;
@@ -228,13 +239,24 @@ export function VkConnectionInfo({ vkToken, onRefresh }: VkConnectionInfoProps) 
                     <span className="ml-1">{getAdminLevelText(group.admin_level)}</span>
                   </Badge>
                   <Button variant="ghost" size="sm" asChild>
-                    <a 
-                      href={`https://vk.com/${group.screen_name}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
+                    <a href={`https://vk.com/${group.screen_name}`} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-4 h-4" />
                     </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await apiClient.deleteVkAccount(String(group.id));
+                        fetchConnectionInfo();
+                        toast({ title: 'Удалено', description: 'Аккаунт удален из списка' });
+                      } catch (e) {
+                        toast({ title: 'Ошибка', description: 'Не удалось удалить аккаунт', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    Удалить
                   </Button>
                 </div>
               </div>

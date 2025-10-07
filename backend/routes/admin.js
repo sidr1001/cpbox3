@@ -7,7 +7,8 @@ const router = express.Router();
 // middleware to check superadmin
 async function requireSuperAdmin(req, res, next) {
   try {
-    const q = await db.query('SELECT role FROM user_roles WHERE user_id=$1 LIMIT 1', [req.user.userId]);
+    // Use users.role instead of user_roles table
+    const q = await db.query('SELECT role FROM users WHERE id=$1 LIMIT 1', [req.user.userId]);
     const role = q.rows[0]?.role || 'user';
     if (role !== 'superadmin') return res.status(403).json({ error: 'Forbidden' });
     next();
@@ -19,14 +20,14 @@ async function requireSuperAdmin(req, res, next) {
 // GET /api/admin/users - list users with basic aggregates
 router.get('/users', auth(), requireSuperAdmin, async (_req, res) => {
   try {
-    const roles = await db.query('SELECT user_id, role FROM user_roles');
-    const users = await Promise.all(roles.rows.map(async (r) => {
+    const base = await db.query('SELECT id as user_id, email, role FROM users');
+    const users = await Promise.all(base.rows.map(async (r) => {
       const profile = await db.query('SELECT display_name FROM profiles WHERE user_id=$1 LIMIT 1', [r.user_id]).catch(() => ({ rows: [] }));
       const management = await db.query('SELECT is_active, work_hours_start, work_hours_end, service_rate FROM user_management WHERE user_id=$1 LIMIT 1', [r.user_id]).catch(() => ({ rows: [] }));
       const balance = await db.query('SELECT balance FROM user_balance WHERE user_id=$1 LIMIT 1', [r.user_id]).catch(() => ({ rows: [] }));
       return {
         id: r.user_id,
-        email: `user-${String(r.user_id).slice(0,8)}@example.com`,
+        email: r.email,
         display_name: profile.rows[0]?.display_name || 'Без имени',
         is_active: management.rows[0]?.is_active || false,
         balance: Number(balance.rows[0]?.balance || 0),
