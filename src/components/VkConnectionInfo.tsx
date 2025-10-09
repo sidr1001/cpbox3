@@ -61,11 +61,19 @@ export function VkConnectionInfo({ vkToken, onRefresh }: VkConnectionInfoProps) 
     try {
       const data = await apiClient.getVkMe(vkToken);
       setConnectionInfo(data as any);
-      // Persist accounts snapshot in DB
+      // Persist accounts snapshot in DB (best-effort, non-fatal)
       const accounts: any[] = [];
       if (data?.user) accounts.push({ id: data.user.id, name: `${data.user.first_name} ${data.user.last_name}`, screen_name: data.user.screen_name, photo_100: data.user.photo_100, admin_level: 3 });
       if (Array.isArray(data?.groups)) accounts.push(...data.groups);
-      if (accounts.length) await apiClient.saveVkAccounts(accounts);
+      if (accounts.length) {
+        try {
+          await apiClient.saveVkAccounts(accounts);
+        } catch (saveError) {
+          // Do not break UI if persistence endpoint is unavailable
+          console.warn('Failed to persist VK accounts snapshot:', saveError);
+          toast({ title: 'Предупреждение', description: 'Не удалось сохранить список аккаунтов VK', variant: 'default' });
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Не удалось загрузить информацию';
       setError(errorMessage);
